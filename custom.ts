@@ -44,26 +44,24 @@ namespace RobotIR {
     //% block="Khởi tạo mắt thu IR tại chân %pin"
     export function initIR(pin: DigitalPin): void {
         pins.setPull(pin, PinPullMode.PullUp);
-        // Chuyển sang bắt xung LOW vì mắt thu IR tích cực mức thấp
+        // Chuyển sang bắt xung LOW
         pins.onPulsed(pin, PulseValue.Low, function () {
             let duration = pins.pulseDuration();
 
-            // 1. Nhận diện tín hiệu START (NEC Protocol thường ~9ms Low)
-            if (duration > 8000 && duration < 10000) {
+            // Nới rộng Start bit: NEC chuẩn là 9ms, nới từ 6ms đến 12ms
+            if (duration > 6000 && duration < 12000) {
                 bitCount = 0;
                 dataRaw = 0;
             }
-            // 2. Nhận diện bit 1 (~1.6ms Low) và bit 0 (~0.5ms Low)
-            // Nới lỏng khoảng thời gian để tăng độ nhạy
             else if (bitCount < 32) {
-                if (duration > 1500 && duration < 1800) {
+                // Bit 1 là xung ~1.6ms, nới thành 1ms đến 2.5ms
+                if (duration > 1000 && duration < 2500) {
                     dataRaw |= (1 << bitCount);
                 }
                 bitCount++;
 
-                // 3. Khi đủ 32 bit, tiến hành trích xuất mã lệnh
                 if (bitCount === 32) {
-                    // Logic chuẩn NEC: Mã lệnh nằm ở byte thứ 3
+                    // Trích xuất byte lệnh (Byte thứ 3 theo chuẩn NEC)
                     irCode = (dataRaw >> 16) & 0xFF;
                 }
             }

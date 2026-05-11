@@ -1,11 +1,11 @@
 /**
- * Thư viện Expansion Microbit - Tối ưu cho Robot Kit
+ * Thư viện Expansion Microbit - Optimized Version
+ * Dựa trên logic giải mã IR của DFRobot Maqueen Plus V2
  */
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion Microbit"
 namespace Expansion_Microbit {
     let irCode = -1;
     let dataRaw = 0;
-    let bitCount = 0;
 
     export enum Button {
         //% block="1"
@@ -45,43 +45,32 @@ namespace Expansion_Microbit {
     }
 
     /**
-     * Quay Servo
-     */
-    //% block="Quay servo chân %pin góc %angle độ"
-    //% angle.min=0 angle.max=180
-    //% group="Cơ cấu chấp hành"
-    export function servoControl(pin: AnalogPin, angle: number): void {
-        pins.servoWritePin(pin, angle)
-    }
-
-    /**
-     * Bật/Tắt thiết bị (LED, Còi...)
-     */
-    //% block="điều khiển chân %pin trạng thái %status"
-    //% group="Cơ cấu chấp hành"
-    export function deviceControl(pin: DigitalPin, status: boolean): void {
-        pins.digitalWritePin(pin, status ? 1 : 0);
-    }
-
-    /**
-     * Khởi tạo mắt thu IR (Dùng chân P16 theo mạch)
+     * Khởi tạo mắt thu IR (Dùng cơ chế Background Task của DFRobot)
      */
     //% block="Khởi tạo mắt thu IR tại chân %pin"
     //% group="Cảm biến IR"
+    //% weight=100
     export function initIR(pin: DigitalPin): void {
         pins.setPull(pin, PinPullMode.PullUp);
-        pins.onPulsed(pin, PulseValue.Low, function () {
-            let duration = pins.pulseDuration();
-            if (duration > 8000 && duration < 10000) {
-                bitCount = 0; dataRaw = 0;
-            } else if (bitCount < 32) {
-                if (duration > 1500 && duration < 1800) {
-                    dataRaw |= (1 << bitCount);
-                }
-                bitCount++;
-                if (bitCount === 32) {
+
+        // Chạy ngầm để liên tục quét tín hiệu mà không làm treo chương trình chính
+        control.inBackground(() => {
+            while (true) {
+                // Đợi xung Start (NEC chuẩn là 9ms Low)
+                // Dùng timeout 50ms để không bỏ lỡ tín hiệu
+                if (pins.pulseIn(pin, PulseValue.Low, 50000) > 8000) {
+                    dataRaw = 0;
+                    // Đọc 32 bit dữ liệu
+                    for (let i = 0; i < 32; i++) {
+                        // Logic DFRobot: Chờ xung High để xác định bit 0 hay 1
+                        if (pins.pulseIn(pin, PulseValue.High, 50000) > 1000) {
+                            dataRaw |= (1 << i);
+                        }
+                    }
+                    // Lấy byte thứ 3 (Data byte)
                     irCode = (dataRaw >> 16) & 0xFF;
                 }
+                basic.pause(20); // Nghỉ một chút để giải phóng CPU
             }
         })
     }
@@ -91,19 +80,42 @@ namespace Expansion_Microbit {
      */
     //% block="Nút %btn được bấm?"
     //% group="Cảm biến IR"
+    //% weight=99
     export function isButtonPressed(btn: Button): boolean {
         if (irCode === btn) {
-            irCode = -1;
+            irCode = -1; // Reset ngay sau khi đọc để tránh lặp lệnh
             return true;
         }
         return false;
     }
 
     /**
-     * Đo khoảng cách siêu âm (Trig P13, Echo P14 theo mạch)
+     * Quay Servo
+     */
+    //% block="Quay servo chân %pin góc %angle độ"
+    //% angle.min=0 angle.max=180
+    //% group="Cơ cấu chấp hành"
+    //% weight=90
+    export function servoControl(pin: AnalogPin, angle: number): void {
+        pins.servoWritePin(pin, angle)
+    }
+
+    /**
+     * Bật/Tắt thiết bị (LED, Còi...)
+     */
+    //% block="điều khiển chân %pin trạng thái %status"
+    //% group="Cơ cấu chấp hành"
+    //% weight=89
+    export function deviceControl(pin: DigitalPin, status: boolean): void {
+        pins.digitalWritePin(pin, status ? 1 : 0);
+    }
+
+    /**
+     * Đo khoảng cách siêu âm (Trig P13, Echo P14)
      */
     //% block="Khoảng cách siêu âm (cm) Trig %trig Echo %echo"
     //% group="Cảm biến Siêu âm"
+    //% weight=80
     export function readUltrasonic(trig: DigitalPin, echo: DigitalPin): number {
         pins.digitalWritePin(trig, 0);
         control.waitMicros(2);

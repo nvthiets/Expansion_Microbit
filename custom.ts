@@ -4,7 +4,7 @@
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Robot Lõi"
 namespace RobotCore {
     /**
-     * Quay Servo
+     * Điều khiển góc quay của động cơ Servo
      * @param pin Chân cắm servo, eg: AnalogPin.P1
      * @param angle Góc quay 0-180, eg: 90
      */
@@ -38,34 +38,46 @@ namespace RobotIR {
     }
 
     /**
-     * Khởi tạo mắt thu IR
+     * Khởi tạo mắt thu IR. 
+     * Lưu ý: Mắt thu thường trả về mức thấp khi có tín hiệu.
      */
     //% block="Khởi tạo mắt thu IR tại chân %pin"
     export function initIR(pin: DigitalPin): void {
         pins.setPull(pin, PinPullMode.PullUp);
-        pins.onPulsed(pin, PulseValue.High, function () {
+        // Chuyển sang bắt xung LOW vì mắt thu IR tích cực mức thấp
+        pins.onPulsed(pin, PulseValue.Low, function () {
             let duration = pins.pulseDuration();
-            if (duration > 4000 && duration < 5000) {
-                bitCount = 0; dataRaw = 0;
-            } else if (duration > 1500 && duration < 2500) {
-                dataRaw += (1 << bitCount); bitCount++;
-            } else if (duration > 300 && duration < 800) {
-                bitCount++;
-            }
-            if (bitCount === 32) {
-                irCode = (dataRaw >> 16) & 0xFF;
+
+            // 1. Nhận diện tín hiệu START (NEC Protocol thường ~9ms Low)
+            if (duration > 8000 && duration < 10000) {
                 bitCount = 0;
+                dataRaw = 0;
+            }
+            // 2. Nhận diện bit 1 (~1.6ms Low) và bit 0 (~0.5ms Low)
+            // Nới lỏng khoảng thời gian để tăng độ nhạy
+            else if (bitCount < 32) {
+                if (duration > 1500 && duration < 1800) {
+                    dataRaw |= (1 << bitCount);
+                }
+                bitCount++;
+
+                // 3. Khi đủ 32 bit, tiến hành trích xuất mã lệnh
+                if (bitCount === 32) {
+                    // Logic chuẩn NEC: Mã lệnh nằm ở byte thứ 3
+                    irCode = (dataRaw >> 16) & 0xFF;
+                }
             }
         })
     }
 
     /**
-     * Kiểm tra nút bấm
+     * Kiểm tra xem nút bấm có được nhấn không.
+     * Trả về true 1 lần duy nhất mỗi khi nhận được tín hiệu mới.
      */
     //% block="Nút %btn được bấm?"
     export function isButtonPressed(btn: Button): boolean {
         if (irCode === btn) {
-            irCode = -1;
+            irCode = -1; // Reset để không bị lặp lại trong vòng lặp
             return true;
         }
         return false;

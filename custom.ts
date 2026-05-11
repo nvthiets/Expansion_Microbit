@@ -2,7 +2,7 @@
  * Thư viện Robot Lõi
  */
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Robot Lõi"
-namespace RobotCore {
+namespace Expansion_Microbit {
     /**
      * Điều khiển góc quay của động cơ Servo
      * @param pin Chân cắm servo, eg: AnalogPin.P1

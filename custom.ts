@@ -1,7 +1,5 @@
-// ==========================================
 // TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ & SERVO (MÀU XANH LÁ)
 // ==========================================
-
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
 
@@ -168,11 +166,9 @@ namespace Expansion_Microbit {
     }
 }
 
+// TAB 2: ĐIỀU KHIỂN LED WS2812 
 // ==========================================
-// TAB 2: ĐIỀU KHIỂN LED WS2812 (BẢN TIẾNG VIỆT)
-// ==========================================
-
-//% weight=90 color=#0078D7 icon="\uf0eb" block="LED WS2812"
+//% weight=90 color=#0078D7 icon="\uf0eb" block="WS2812"
 namespace Expansion_WS2812 {
     let strips: neopixel.Strip[] = [];
     let _brightness = 100;
@@ -265,5 +261,131 @@ namespace Expansion_WS2812 {
         let s = getStrip(pin);
         s.clear();
         s.show();
+    }
+}
+
+// TAB 3: MẮT THU HỒNG NGOẠI IR 
+// ==========================================
+//% weight=85 color=#E3008C icon="\uf012" block="Hồng Ngoại IR"
+namespace Expansion_IR {
+    let irPin: DigitalPin;
+    let lastCommand = -1;
+    let irInitialized = false;
+
+    // Các biến phục vụ ngắt phần cứng
+    let mark = 0;
+    let space = 0;
+    let bits = 0;
+    let data = 0;
+    let receiving = false;
+
+    // Mã HEX 
+    export enum IRKeys {
+        //% block="Lên"
+        Up = 0x18,
+        //% block="Xuống"
+        Down = 0x52,
+        //% block="Trái"
+        Left = 0x08,
+        //% block="Phải"
+        Right = 0x5A,
+        //% block="OK"
+        OK = 0x1C,
+        //% block="Phím 1"
+        Num1 = 0x45, 
+        //% block="Phím 2"
+        Num2 = 0x46, 
+        //% block="Phím 3"
+        Num3 = 0x47, 
+        //% block="Phím 4"
+        Num4 = 0x44,
+        //% block="Phím 5"
+        Num5 = 0x40,
+        //% block="Phím 6"
+        Num6 = 0x43,
+        //% block="Phím 7"
+        Num7 = 0x07,
+        //% block="Phím 8"
+        Num8 = 0x15,
+        //% block="Phím 9"
+        Num9 = 0x09,
+        //% block="Phím 0"
+        Num0 = 0x19,
+        //% block="* (Sao)"
+        Star = 0x16,
+        //% block="# (Thăng)"
+        Hash = 0x0D,
+    }
+
+    
+    //Khởi tạo mắt thu IR. Cần gọi ở khối [on start]
+    //% block="Khởi tạo mắt thu IR tại chân %pin"
+    //% weight=100
+    export function initIR(pin: DigitalPin): void {
+        irPin = pin;
+        pins.setPull(irPin, PinPullMode.PullUp);
+        irInitialized = true;
+
+        // Ngắt phần cứng bắt xung LOW (Đo khoảng thời gian Mark)
+        pins.onPulsed(irPin, PulseValue.Low, function () {
+            mark = pins.pulseDuration();
+        });
+
+        // Ngắt phần cứng bắt xung HIGH (Đo khoảng thời gian Space và giải mã)
+        pins.onPulsed(irPin, PulseValue.High, function () {
+            space = pins.pulseDuration();
+
+            // Bắt Header của giao thức NEC: 9ms LOW, 4.5ms HIGH
+            if (mark > 8000 && mark < 10000 && space > 3000 && space < 5000) {
+                bits = 0;
+                data = 0;
+                receiving = true;
+            }
+            // Đọc 32 bit dữ liệu nếu đã bắt được Header
+            else if (receiving) {
+                if (space > 1000 && space < 2500) {
+                    // Khoảng High dài (~1.69ms) -> Ghi nhận Bit 1
+                    data |= (1 << bits);
+                } else if (space > 200 && space < 1000) {
+                    // Khoảng High ngắn (~0.56ms) -> Ghi nhận Bit 0 (không cần dịch bit)
+                } else {
+                    // Xung nhiễu, hủy quá trình đọc mẻ này
+                    receiving = false;
+                    return;
+                }
+                bits++;
+
+                // Đã nhận đủ 32 bit dữ liệu
+                if (bits === 32) {
+                    // Trích xuất mã Lệnh (Command) từ byte thứ 3
+                    let command = (data >> 16) & 0xFF;
+                    lastCommand = command;
+                    receiving = false;
+                }
+            }
+        });
+    }
+
+    //Kiểm tra xem một phím có đang được bấm hay không
+    //% block="Phím %key được bấm ?"
+    //% weight=90
+    export function isKeyPressed(key: IRKeys): boolean {
+        if (!irInitialized) return false;
+        if (lastCommand === key) {
+            lastCommand = -1; // Xóa đệm, tránh dính phím
+            return true;
+        }
+        return false;
+    }
+
+
+    //Trả về mã HEX thực tế của phím (Dùng để in ra màn hình LED matrix)
+    //% block="Đọc mã HEX của phím"
+    //% weight=80
+    export function getIrCode(): number {
+        if (!irInitialized) return -1;
+        let current = lastCommand;
+        lastCommand = -1;
+        return current;
     }
 }

@@ -1,1 +1,1 @@
-<xml xmlns="https://developers.google.com/blockly/xml"><variables></variables><block type="pxt-on-start" id="b-m-vfhmk41SBXaH45as" x="0" y="0"></block></xml>
+<xml xmlns="https://developers.google.com/blockly/xml"><variables><variable id="5-4.Kj.K(ueev)19U/di">var</variable></variables><block type="device_forever" id="CUq%xLRu~cakfs)spwFB" x="391" y="-133"></block><block type="pxt-on-start" id="b-m-vfhmk41SBXaH45as" x="0" y="0"></block></xml>

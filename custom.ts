@@ -1,9 +1,10 @@
+// ==========================================
+// TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ & SERVO (MÀU XANH LÁ)
+// ==========================================
+
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
 
-    // ==========================================
-    // CÁC ENUM TẠO MENU THẢ (DROPDOWN)
-    // ==========================================
     export enum MotorNum {
         //% block="M1 (Chân 10, 11)"
         M1 = 1,
@@ -37,9 +38,6 @@ namespace Expansion_Microbit {
         CH15 = 15
     }
 
-    // ==========================================
-    // LÕI XỬ LÝ I2C CHO PCA9685
-    // ==========================================
     const PCA9685_ADDRESS = 0x40;
     const MODE1 = 0x00;
     const PRESCALE = 0xFE;
@@ -61,10 +59,8 @@ namespace Expansion_Microbit {
 
     function initPCA9685(): void {
         i2cwrite(PCA9685_ADDRESS, MODE1, 0x00);
-
         let freq = 50;
         let prescaleval = 25000000 / 4096 / freq - 1;
-
         let oldmode = i2cread(PCA9685_ADDRESS, MODE1);
         let newmode = (oldmode & 0x7F) | 0x10;
         i2cwrite(PCA9685_ADDRESS, MODE1, newmode);
@@ -91,13 +87,8 @@ namespace Expansion_Microbit {
         pins.i2cWriteBuffer(PCA9685_ADDRESS, buf);
     }
 
-    // ==========================================
-    // KHỐI LỆNH ĐIỀU KHIỂN QUA PCA9685
-    // ==========================================
-
     //% block="Servo PCA9685 |%channel| quay %degree độ"
-    //% weight=99
-    //% degree.min=0 degree.max=180
+    //% weight=99 degree.min=0 degree.max=180
     //% group="Cơ cấu chấp hành (PCA9685)"
     export function servoPCA9685(channel: ServoChannel, degree: number): void {
         if (!initialized) initPCA9685();
@@ -107,8 +98,7 @@ namespace Expansion_Microbit {
     }
 
     //% block="Servo PCA9685 |%channel| xuất xung %pulse"
-    //% weight=98
-    //% pulse.min=500 pulse.max=2500
+    //% weight=98 pulse.min=500 pulse.max=2500
     //% group="Cơ cấu chấp hành (PCA9685)"
     export function servoPulsePCA9685(channel: ServoChannel, pulse: number): void {
         if (!initialized) initPCA9685();
@@ -117,22 +107,14 @@ namespace Expansion_Microbit {
     }
 
     //% block="Động cơ %motor chạy %dir tốc độ %speed"
-    //% speed.min=0 speed.max=100
+    //% weight=97 speed.min=0 speed.max=100
     //% group="Cơ cấu chấp hành (PCA9685)"
-    //% weight=97
     export function motorControl(motor: MotorNum, dir: MotorDir, speed: number): void {
         if (!initialized) initPCA9685();
-        let in1 = 0;
-        let in2 = 0;
+        let in1 = 0, in2 = 0;
 
-        // Map chân DRV8833 tương ứng với các kênh 4, 5, 6, 7
-        if (motor == MotorNum.M1) {
-            in1 = 4; // Kênh 4 (Chân 10)
-            in2 = 5; // Kênh 5 (Chân 11)
-        } else if (motor == MotorNum.M2) {
-            in1 = 6; // Kênh 6 (Chân 12)
-            in2 = 7; // Kênh 7 (Chân 13)
-        }
+        if (motor == MotorNum.M1) { in1 = 4; in2 = 5; }
+        else if (motor == MotorNum.M2) { in1 = 6; in2 = 7; }
 
         if (speed > 100) speed = 100;
         if (speed < 0) speed = 0;
@@ -140,72 +122,148 @@ namespace Expansion_Microbit {
         let pwm_val = Math.round((speed * 4095) / 100);
 
         if (dir == MotorDir.Forward) {
-            setPwm(in1, 0, pwm_val);
-            setPwm(in2, 0, 0);
+            setPwm(in1, 0, pwm_val); setPwm(in2, 0, 0);
         } else {
-            setPwm(in1, 0, 0);
-            setPwm(in2, 0, pwm_val);
+            setPwm(in1, 0, 0); setPwm(in2, 0, pwm_val);
         }
     }
 
-    //% block="Chạy động cơ %motor"
-    //% group="Cơ cấu chấp hành (PCA9685)"
-    //% weight=96
+    //% block="Chạy động cơ %motor tối đa"
+    //% weight=96 group="Cơ cấu chấp hành (PCA9685)"
     export function motorMax(motor: MotorNum): void {
         motorControl(motor, MotorDir.Forward, 100);
     }
 
     //% block="Dừng động cơ %motor"
-    //% group="Cơ cấu chấp hành (PCA9685)"
-    //% weight=95
+    //% weight=95 group="Cơ cấu chấp hành (PCA9685)"
     export function motorStop(motor: MotorNum): void {
         if (!initialized) initPCA9685();
-
         let in1 = (motor == MotorNum.M1) ? 4 : 6;
         let in2 = (motor == MotorNum.M1) ? 5 : 7;
-
-        setPwm(in1, 0, 0);
-        setPwm(in2, 0, 0);
+        setPwm(in1, 0, 0); setPwm(in2, 0, 0);
     }
 
-    // ==========================================
-    // KHỐI LỆNH GỐC (Cắm trực tiếp)
-    // ==========================================
-
     //% block="Quay servo chân %pin góc %angle độ"
-    //% angle.min=0 angle.max=180
-    //% group="Cơ cấu chấp hành"
-    //% weight=90
+    //% weight=90 angle.min=0 angle.max=180 group="Cơ cấu chấp hành"
     export function servoControl(pin: AnalogPin, angle: number): void {
         pins.servoWritePin(pin, angle);
     }
 
     //% block="siêu âm chân TRIG %trig ECHO %echo đơn vị cm"
-    //% weight=89
-    //% group="Cảm biến"
+    //% weight=89 group="Cảm biến"
     export function readUltrasonic(trig: DigitalPin, echo: DigitalPin): number {
-        pins.digitalWritePin(trig, 0);
-        control.waitMicros(2);
-
-        pins.digitalWritePin(trig, 1);
-        control.waitMicros(10);
+        pins.digitalWritePin(trig, 0); control.waitMicros(2);
+        pins.digitalWritePin(trig, 1); control.waitMicros(10);
         pins.digitalWritePin(trig, 0);
 
         let data = pins.pulseIn(echo, PulseValue.High, 30000);
-
         if (data == 0) {
-            pins.digitalWritePin(trig, 1);
-            control.waitMicros(10);
+            pins.digitalWritePin(trig, 1); control.waitMicros(10);
             pins.digitalWritePin(trig, 0);
             data = pins.pulseIn(echo, PulseValue.High, 30000);
         }
 
         let distance = data / 58;
+        return (distance <= 0 || distance > 400) ? 400 : Math.round(distance);
+    }
+}
 
-        if (distance <= 0 || distance > 400) {
-            return 400;
+// ==========================================
+// TAB 2: ĐIỀU KHIỂN LED WS2812 (BẢN TIẾNG VIỆT)
+// ==========================================
+
+//% weight=90 color=#0078D7 icon="\uf0eb" block="LED WS2812"
+namespace Expansion_WS2812 {
+    let strips: neopixel.Strip[] = [];
+    let _brightness = 100;
+
+    function getStrip(pin: DigitalPin): neopixel.Strip {
+        if (!strips[pin]) {
+            strips[pin] = neopixel.create(pin, 4, NeoPixelMode.RGB);
+            strips[pin].setBrightness(_brightness);
         }
+        return strips[pin];
+    }
 
-        return Math.round(distance);
+    export enum NeoPixelColors {
+        //% block="đỏ"
+        Red = 0xFF0000,
+        //% block="cam"
+        Orange = 0xFFA500,
+        //% block="vàng"
+        Yellow = 0xFFFF00,
+        //% block="xanh lá"
+        Green = 0x00FF00,
+        //% block="xanh dương"
+        Blue = 0x0000FF,
+        //% block="chàm"
+        Indigo = 0x4b0082,
+        //% block="tím"
+        Violet = 0x8a2be2,
+        //% block="tím hồng"
+        Purple = 0xFF00FF,
+        //% block="trắng"
+        White = 0xFFFFFF,
+        //% block="đen (tắt)"
+        Black = 0x000000
+    }
+
+    //% block="chỉnh độ sáng LED RGB thành %brightness"
+    //% brightness.min=0 brightness.max=255
+    //% weight=100
+    export function setBrightness(brightness: number): void {
+        _brightness = brightness;
+        for (let i = 0; i < strips.length; i++) {
+            if (strips[i]) {
+                strips[i].setBrightness(_brightness);
+                strips[i].show();
+            }
+        }
+    }
+
+    //% block="chân %pin bật toàn bộ LED RGB màu %color"
+    //% weight=90
+    export function showColor(pin: DigitalPin, color: NeoPixelColors): void {
+        let s = getStrip(pin);
+        s.showColor(color);
+    }
+
+    //% block="chân %pin bóng LED số %index sáng màu %color"
+    //% weight=80
+    export function showLightColor(pin: DigitalPin, index: number, color: NeoPixelColors): void {
+        let s = getStrip(pin);
+        s.setPixelColor(index, color);
+        s.show();
+    }
+
+    //% block="chân %pin dải từ bóng %start số lượng %count sáng màu %color"
+    //% weight=75
+    export function showRangeColor(pin: DigitalPin, start: number, count: number, color: NeoPixelColors): void {
+        let s = getStrip(pin);
+        // Cắt dải phụ và đổi màu
+        let range = s.range(start, count);
+        range.showColor(color);
+    }
+
+    //% block="đỏ %red xanh lá %green xanh dương %blue"
+    //% red.min=0 red.max=255 green.min=0 green.max=255 blue.min=0 blue.max=255
+    //% weight=70
+    export function rgb(red: number, green: number, blue: number): number {
+        return ((red & 0xFF) << 16) | ((green & 0xFF) << 8) | (blue & 0xFF);
+    }
+
+    //% block="chân %pin bật hiệu ứng cầu vồng từ %startHue đến %endHue"
+    //% weight=60
+    export function showRainbow(pin: DigitalPin, startHue: number, endHue: number): void {
+        let s = getStrip(pin);
+        s.showRainbow(startHue, endHue);
+    }
+
+    //% block="chân %pin tắt toàn bộ LED RGB"
+    //% weight=50
+    export function clearAll(pin: DigitalPin): void {
+        let s = getStrip(pin);
+        s.clear();
+        s.show();
     }
 }

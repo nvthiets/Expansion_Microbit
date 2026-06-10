@@ -1,6 +1,23 @@
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
 
+    // ==========================================
+    // CÁC ENUM TẠO MENU THẢ (DROPDOWN)
+    // ==========================================
+    export enum MotorNum {
+        //% block="M1 (Chân 10, 11)"
+        M1 = 1,
+        //% block="M2 (Chân 12, 13)"
+        M2 = 2
+    }
+
+    export enum MotorDir {
+        //% block="Thuận"
+        Forward = 1,
+        //% block="Ngược"
+        Reverse = 2
+    }
+
     export enum ServoChannel {
         //% block="Servo 1 (Chân IC 15)"
         CH8 = 8,
@@ -20,6 +37,9 @@ namespace Expansion_Microbit {
         CH15 = 15
     }
 
+    // ==========================================
+    // LÕI XỬ LÝ I2C CHO PCA9685
+    // ==========================================
     const PCA9685_ADDRESS = 0x40;
     const MODE1 = 0x00;
     const PRESCALE = 0xFE;
@@ -71,6 +91,10 @@ namespace Expansion_Microbit {
         pins.i2cWriteBuffer(PCA9685_ADDRESS, buf);
     }
 
+    // ==========================================
+    // KHỐI LỆNH ĐIỀU KHIỂN QUA PCA9685
+    // ==========================================
+
     //% block="Servo PCA9685 |%channel| quay %degree độ"
     //% weight=99
     //% degree.min=0 degree.max=180
@@ -92,16 +116,72 @@ namespace Expansion_Microbit {
         setPwm(channel, 0, value);
     }
 
+    //% block="Động cơ %motor chạy %dir tốc độ %speed"
+    //% speed.min=0 speed.max=100
+    //% group="Cơ cấu chấp hành (PCA9685)"
+    //% weight=97
+    export function motorControl(motor: MotorNum, dir: MotorDir, speed: number): void {
+        if (!initialized) initPCA9685();
+        let in1 = 0;
+        let in2 = 0;
+
+        // Map chân DRV8833 tương ứng với các kênh 4, 5, 6, 7
+        if (motor == MotorNum.M1) {
+            in1 = 4; // Kênh 4 (Chân 10)
+            in2 = 5; // Kênh 5 (Chân 11)
+        } else if (motor == MotorNum.M2) {
+            in1 = 6; // Kênh 6 (Chân 12)
+            in2 = 7; // Kênh 7 (Chân 13)
+        }
+
+        if (speed > 100) speed = 100;
+        if (speed < 0) speed = 0;
+
+        let pwm_val = Math.round((speed * 4095) / 100);
+
+        if (dir == MotorDir.Forward) {
+            setPwm(in1, 0, pwm_val);
+            setPwm(in2, 0, 0);
+        } else {
+            setPwm(in1, 0, 0);
+            setPwm(in2, 0, pwm_val);
+        }
+    }
+
+    //% block="Chạy động cơ %motor"
+    //% group="Cơ cấu chấp hành (PCA9685)"
+    //% weight=96
+    export function motorMax(motor: MotorNum): void {
+        motorControl(motor, MotorDir.Forward, 100);
+    }
+
+    //% block="Dừng động cơ %motor"
+    //% group="Cơ cấu chấp hành (PCA9685)"
+    //% weight=95
+    export function motorStop(motor: MotorNum): void {
+        if (!initialized) initPCA9685();
+
+        let in1 = (motor == MotorNum.M1) ? 4 : 6;
+        let in2 = (motor == MotorNum.M1) ? 5 : 7;
+
+        setPwm(in1, 0, 0);
+        setPwm(in2, 0, 0);
+    }
+
+    // ==========================================
+    // KHỐI LỆNH GỐC (Cắm trực tiếp)
+    // ==========================================
+
     //% block="Quay servo chân %pin góc %angle độ"
     //% angle.min=0 angle.max=180
     //% group="Cơ cấu chấp hành"
-    //% weight=95
+    //% weight=90
     export function servoControl(pin: AnalogPin, angle: number): void {
         pins.servoWritePin(pin, angle);
     }
 
     //% block="siêu âm chân TRIG %trig ECHO %echo đơn vị cm"
-    //% weight=94
+    //% weight=89
     //% group="Cảm biến"
     export function readUltrasonic(trig: DigitalPin, echo: DigitalPin): number {
         pins.digitalWritePin(trig, 0);

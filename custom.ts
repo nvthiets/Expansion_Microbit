@@ -1,4 +1,4 @@
-// TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ & SERVO (MÀU XANH LÁ)
+// TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ, SERVO & CẢM BIẾN CƠ BẢN
 // ==========================================
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
@@ -34,6 +34,15 @@ namespace Expansion_Microbit {
         CH14 = 14,
         //% block="Servo 8 (Chân IC 22)"
         CH15 = 15
+    }
+
+    export enum LinePins {
+        //% block="R1"
+        P0 = 0,
+        //% block="M"
+        P1 = 1,
+        //% block="L1"
+        P2 = 2
     }
 
     const PCA9685_ADDRESS = 0x40;
@@ -85,6 +94,8 @@ namespace Expansion_Microbit {
         pins.i2cWriteBuffer(PCA9685_ADDRESS, buf);
     }
 
+    // NHÓM: CƠ CẤU CHẤP HÀNH (PCA9685)
+    // ==========================================
     //% block="Servo PCA9685 |%channel| quay %degree độ"
     //% weight=99 degree.min=0 degree.max=180
     //% group="Cơ cấu chấp hành (PCA9685)"
@@ -141,12 +152,16 @@ namespace Expansion_Microbit {
         setPwm(in1, 0, 0); setPwm(in2, 0, 0);
     }
 
+    // NHÓM: CƠ CẤU CHẤP HÀNH (TRỰC TIẾP)
+    // ==========================================
     //% block="Quay servo chân %pin góc %angle độ"
     //% weight=90 angle.min=0 angle.max=180 group="Cơ cấu chấp hành"
     export function servoControl(pin: AnalogPin, angle: number): void {
         pins.servoWritePin(pin, angle);
     }
 
+    // NHÓM: CẢM BIẾN
+    // ==========================================
     //% block="siêu âm chân TRIG %trig ECHO %echo đơn vị cm"
     //% weight=89 group="Cảm biến"
     export function readUltrasonic(trig: DigitalPin, echo: DigitalPin): number {
@@ -163,6 +178,30 @@ namespace Expansion_Microbit {
 
         let distance = data / 58;
         return (distance <= 0 || distance > 400) ? 400 : Math.round(distance);
+    }
+
+    //% block="đọc giá trị số dò line chân %pin"
+    //% weight=88 group="Cảm biến"
+    export function readLineDigital(pin: LinePins): number {
+        if (pin == LinePins.P0) {
+            return pins.digitalReadPin(DigitalPin.P0);
+        } else if (pin == LinePins.P1) {
+            return pins.digitalReadPin(DigitalPin.P1);
+        } else {
+            return pins.digitalReadPin(DigitalPin.P2);
+        }
+    }
+
+    //% block="đọc giá trị tương tự dò line chân %pin"
+    //% weight=87 group="Cảm biến"
+    export function readLineAnalog(pin: LinePins): number {
+        if (pin == LinePins.P0) {
+            return pins.analogReadPin(AnalogPin.P0);
+        } else if (pin == LinePins.P1) {
+            return pins.analogReadPin(AnalogPin.P1);
+        } else {
+            return pins.analogReadPin(AnalogPin.P2);
+        }
     }
 }
 
@@ -317,7 +356,6 @@ namespace Expansion_IR {
         Hash = 0x0D,
     }
 
-    
     //Khởi tạo mắt thu IR. Cần gọi ở khối [on start]
     //% block="Khởi tạo mắt thu IR tại chân %pin"
     //% weight=100
@@ -377,7 +415,6 @@ namespace Expansion_IR {
         }
         return false;
     }
-
 
     //Trả về mã HEX thực tế của phím (Dùng để in ra màn hình LED matrix)
     //% block="Đọc mã HEX của phím"

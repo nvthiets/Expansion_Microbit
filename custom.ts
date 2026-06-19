@@ -1,13 +1,17 @@
-// TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ, SERVO & CẢM BIẾN CƠ BẢN
+// ==========================================
+// TAB 1: ĐIỀU KHIỂN ĐỘNG CƠ, SERVO & CẢM BIẾN
 // ==========================================
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
-
     export enum MotorNum {
-        //% block="M1 (Chân 10, 11)"
+        //% block="M1"
         M1 = 1,
-        //% block="M2 (Chân 12, 13)"
-        M2 = 2
+        //% block="M2"
+        M2 = 2,
+        //% block="M3"
+        M3 = 3,
+        //% block="M4"
+        M4 = 4
     }
 
     export enum MotorDir {
@@ -18,31 +22,22 @@ namespace Expansion_Microbit {
     }
 
     export enum ServoChannel {
-        //% block="Servo 1 (Chân IC 15)"
-        CH8 = 8,
-        //% block="Servo 2 (Chân IC 16)"
-        CH9 = 9,
-        //% block="Servo 3 (Chân IC 17)"
-        CH10 = 10,
-        //% block="Servo 4 (Chân IC 18)"
-        CH11 = 11,
-        //% block="Servo 5 (Chân IC 19)"
-        CH12 = 12,
-        //% block="Servo 6 (Chân IC 20)"
-        CH13 = 13,
-        //% block="Servo 7 (Chân IC 21)"
-        CH14 = 14,
-        //% block="Servo 8 (Chân IC 22)"
-        CH15 = 15
-    }
-
-    export enum LinePins {
-        //% block="R1"
-        P0 = 0,
-        //% block="M"
-        P1 = 1,
-        //% block="L1"
-        P2 = 2
+        //% block="S1"
+        S1 = 0,
+        //% block="S2"
+        S2 = 1,
+        //% block="S3"
+        S3 = 2,
+        //% block="S4"
+        S4 = 3,
+        //% block="S5"
+        S5 = 4,
+        //% block="S6"
+        S6 = 5,
+        //% block="S7"
+        S7 = 6,
+        //% block="S8"
+        S8 = 7
     }
 
     const PCA9685_ADDRESS = 0x40;
@@ -76,10 +71,15 @@ namespace Expansion_Microbit {
         control.waitMicros(5000);
         i2cwrite(PCA9685_ADDRESS, MODE1, oldmode | 0xa1);
 
-        setPwm(0, 0, 4095);
+        //setPwm(0, 0, 4095);
         for (let idx = 1; idx < 16; idx++) {
             setPwm(idx, 0, 0);
         }
+
+        // Kích hoạt chân nSLEEP (P8 và P12) để đánh thức 2 IC DRV8833 theo mạch V2
+        pins.digitalWritePin(DigitalPin.P8, 1);
+        pins.digitalWritePin(DigitalPin.P12, 1);
+
         initialized = true;
     }
 
@@ -94,11 +94,12 @@ namespace Expansion_Microbit {
         pins.i2cWriteBuffer(PCA9685_ADDRESS, buf);
     }
 
+    // ==========================================
     // NHÓM: CƠ CẤU CHẤP HÀNH (PCA9685)
     // ==========================================
+
     //% block="Servo PCA9685 |%channel| quay %degree độ"
     //% weight=99 degree.min=0 degree.max=180
-    //% group="Cơ cấu chấp hành (PCA9685)"
     export function servoPCA9685(channel: ServoChannel, degree: number): void {
         if (!initialized) initPCA9685();
         let v_us = (degree * 1800 / 180 + 600);
@@ -106,24 +107,17 @@ namespace Expansion_Microbit {
         setPwm(channel, 0, value);
     }
 
-    //% block="Servo PCA9685 |%channel| xuất xung %pulse"
-    //% weight=98 pulse.min=500 pulse.max=2500
-    //% group="Cơ cấu chấp hành (PCA9685)"
-    export function servoPulsePCA9685(channel: ServoChannel, pulse: number): void {
-        if (!initialized) initPCA9685();
-        let value = pulse * 4096 / 20000;
-        setPwm(channel, 0, value);
-    }
-
     //% block="Động cơ %motor chạy %dir tốc độ %speed"
     //% weight=97 speed.min=0 speed.max=100
-    //% group="Cơ cấu chấp hành (PCA9685)"
     export function motorControl(motor: MotorNum, dir: MotorDir, speed: number): void {
         if (!initialized) initPCA9685();
         let in1 = 0, in2 = 0;
 
-        if (motor == MotorNum.M1) { in1 = 4; in2 = 5; }
-        else if (motor == MotorNum.M2) { in1 = 6; in2 = 7; }
+        // Cập nhật cụm chân Động cơ theo sơ đồ Altium V2
+        if (motor == MotorNum.M1) { in1 = 8; in2 = 9; }
+        else if (motor == MotorNum.M2) { in1 = 10; in2 = 11; }
+        else if (motor == MotorNum.M3) { in1 = 12; in2 = 13; }
+        else if (motor == MotorNum.M4) { in1 = 14; in2 = 15; }
 
         if (speed > 100) speed = 100;
         if (speed < 0) speed = 0;
@@ -137,33 +131,27 @@ namespace Expansion_Microbit {
         }
     }
 
-    //% block="Chạy động cơ %motor tối đa"
-    //% weight=96 group="Cơ cấu chấp hành (PCA9685)"
-    export function motorMax(motor: MotorNum): void {
-        motorControl(motor, MotorDir.Forward, 100);
-    }
-
     //% block="Dừng động cơ %motor"
-    //% weight=95 group="Cơ cấu chấp hành (PCA9685)"
+    //% weight=95 
     export function motorStop(motor: MotorNum): void {
         if (!initialized) initPCA9685();
-        let in1 = (motor == MotorNum.M1) ? 4 : 6;
-        let in2 = (motor == MotorNum.M1) ? 5 : 7;
+        let in1 = 0, in2 = 0;
+
+        if (motor == MotorNum.M1) { in1 = 8; in2 = 9; }
+        else if (motor == MotorNum.M2) { in1 = 10; in2 = 11; }
+        else if (motor == MotorNum.M3) { in1 = 12; in2 = 13; }
+        else if (motor == MotorNum.M4) { in1 = 14; in2 = 15; }
+
         setPwm(in1, 0, 0); setPwm(in2, 0, 0);
     }
 
-    // NHÓM: CƠ CẤU CHẤP HÀNH (TRỰC TIẾP)
     // ==========================================
-    //% block="Quay servo chân %pin góc %angle độ"
-    //% weight=90 angle.min=0 angle.max=180 group="Cơ cấu chấp hành"
-    export function servoControl(pin: AnalogPin, angle: number): void {
-        pins.servoWritePin(pin, angle);
-    }
-
     // NHÓM: CẢM BIẾN
     // ==========================================
-    //% block="siêu âm chân TRIG %trig ECHO %echo đơn vị cm"
-    //% weight=89 group="Cảm biến"
+
+    //% block="đọc khoảng cách siêu âm (cm) chân TRIG %trig ECHO %echo"
+    //% trig.defl=DigitalPin.P13 echo.defl=DigitalPin.P14
+    //% weight=89 
     export function readUltrasonic(trig: DigitalPin, echo: DigitalPin): number {
         pins.digitalWritePin(trig, 0); control.waitMicros(2);
         pins.digitalWritePin(trig, 1); control.waitMicros(10);
@@ -179,45 +167,36 @@ namespace Expansion_Microbit {
         let distance = data / 58;
         return (distance <= 0 || distance > 400) ? 400 : Math.round(distance);
     }
-
-    //% block="đọc giá trị số dò line chân %pin"
-    //% weight=88 group="Cảm biến"
-    export function readLineDigital(pin: LinePins): number {
-        if (pin == LinePins.P0) {
-            return pins.digitalReadPin(DigitalPin.P0);
-        } else if (pin == LinePins.P1) {
-            return pins.digitalReadPin(DigitalPin.P1);
-        } else {
-            return pins.digitalReadPin(DigitalPin.P2);
-        }
-    }
-
-    //% block="đọc giá trị tương tự dò line chân %pin"
-    //% weight=87 group="Cảm biến"
-    export function readLineAnalog(pin: LinePins): number {
-        if (pin == LinePins.P0) {
-            return pins.analogReadPin(AnalogPin.P0);
-        } else if (pin == LinePins.P1) {
-            return pins.analogReadPin(AnalogPin.P1);
-        } else {
-            return pins.analogReadPin(AnalogPin.P2);
-        }
-    }
 }
 
+// ==========================================
 // TAB 2: ĐIỀU KHIỂN LED WS2812 
 // ==========================================
 //% weight=90 color=#0078D7 icon="\uf0eb" block="WS2812"
 namespace Expansion_WS2812 {
-    let strips: neopixel.Strip[] = [];
+    let activeStrip: neopixel.Strip = null;
+    let _activePin = DigitalPin.P16; // Cập nhật chân P16 theo mạch V2
+    let _activeCount = 4;
     let _brightness = 100;
 
-    function getStrip(pin: DigitalPin): neopixel.Strip {
-        if (!strips[pin]) {
-            strips[pin] = neopixel.create(pin, 4, NeoPixelMode.RGB);
-            strips[pin].setBrightness(_brightness);
+    //% block="Cài đặt dải LED tại chân %pin với %numLeds bóng"
+    //% pin.defl=DigitalPin.P12 numLeds.defl=4
+    //% weight=110
+    export function setupLED(pin: DigitalPin, numLeds: number): void {
+        _activePin = pin;
+        _activeCount = numLeds;
+        activeStrip = neopixel.create(_activePin, _activeCount, NeoPixelMode.RGB);
+        activeStrip.setBrightness(_brightness);
+        activeStrip.clear();
+        activeStrip.show();
+    }
+
+    function getStrip(): neopixel.Strip {
+        if (!activeStrip) {
+            activeStrip = neopixel.create(_activePin, _activeCount, NeoPixelMode.RGB);
+            activeStrip.setBrightness(_brightness);
         }
-        return strips[pin];
+        return activeStrip;
     }
 
     export enum NeoPixelColors {
@@ -243,66 +222,73 @@ namespace Expansion_WS2812 {
         Black = 0x000000
     }
 
-    //% block="chỉnh độ sáng LED RGB thành %brightness"
-    //% brightness.min=0 brightness.max=255
+    //% block="Độ sáng LED thành %brightness"
+    //% brightness.min=0 brightness.max=255 brightness.defl=100
     //% weight=100
     export function setBrightness(brightness: number): void {
         _brightness = brightness;
-        for (let i = 0; i < strips.length; i++) {
-            if (strips[i]) {
-                strips[i].setBrightness(_brightness);
-                strips[i].show();
-            }
+        if (activeStrip) {
+            activeStrip.setBrightness(_brightness);
+            activeStrip.show();
         }
     }
 
-    //% block="chân %pin bật toàn bộ LED RGB màu %color"
+    //% block="Bật toàn bộ LED màu %color"
     //% weight=90
-    export function showColor(pin: DigitalPin, color: NeoPixelColors): void {
-        let s = getStrip(pin);
-        s.showColor(color);
+    export function showColor(color: NeoPixelColors): void {
+        getStrip().showColor(color);
     }
 
-    //% block="chân %pin bóng LED số %index sáng màu %color"
-    //% weight=80
-    export function showLightColor(pin: DigitalPin, index: number, color: NeoPixelColors): void {
-        let s = getStrip(pin);
-        s.setPixelColor(index, color);
-        s.show();
-    }
-
-    //% block="chân %pin dải từ bóng %start số lượng %count sáng màu %color"
+    //% block="Bật màu %color cho %count bóng từ vị trí %start"
+    //% inlineInputMode=inline
+    //% start.defl=0 count.defl=4
     //% weight=75
-    export function showRangeColor(pin: DigitalPin, start: number, count: number, color: NeoPixelColors): void {
-        let s = getStrip(pin);
-        // Cắt dải phụ và đổi màu
+    export function showRangeColor(color: NeoPixelColors, count: number, start: number): void {
+        let s = getStrip();
         let range = s.range(start, count);
         range.showColor(color);
     }
 
-    //% block="đỏ %red xanh lá %green xanh dương %blue"
-    //% red.min=0 red.max=255 green.min=0 green.max=255 blue.min=0 blue.max=255
-    //% weight=70
-    export function rgb(red: number, green: number, blue: number): number {
-        return ((red & 0xFF) << 16) | ((green & 0xFF) << 8) | (blue & 0xFF);
-    }
-
-    //% block="chân %pin bật hiệu ứng cầu vồng từ %startHue đến %endHue"
+    //% block="Hiệu ứng cầu vồng từ màu %startHue đến %endHue"
+    //% inlineInputMode=inline
+    //% startHue.defl=1 endHue.defl=360
     //% weight=60
-    export function showRainbow(pin: DigitalPin, startHue: number, endHue: number): void {
-        let s = getStrip(pin);
-        s.showRainbow(startHue, endHue);
+    export function showRainbow(startHue: number, endHue: number): void {
+        getStrip().showRainbow(startHue, endHue);
     }
 
-    //% block="chân %pin tắt toàn bộ LED RGB"
+    //% block="Tắt toàn bộ LED"
     //% weight=50
-    export function clearAll(pin: DigitalPin): void {
-        let s = getStrip(pin);
+    export function clearAll(): void {
+        let s = getStrip();
         s.clear();
+        s.show();
+    }
+
+    //% block="Đỏ %r Xanh lá %g Xanh dương %b"
+    //% r.min=0 r.max=255 g.min=0 g.max=255 b.min=0 b.max=255
+    //% weight=88 group="Màu tuỳ chỉnh"
+    export function rgb(r: number, g: number, b: number): number {
+        return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+    }
+
+    //% block="Bật toàn bộ LED màu %color"
+    //% weight=89 group="Màu tuỳ chỉnh"
+    export function showCustomColor(color: number): void {
+        let s = getStrip();
+        s.showColor(color);
+    }
+
+    //% block="Bóng số %index sáng màu %color"
+    //% weight=87 group="Màu tuỳ chỉnh"
+    export function showPixelCustomColor(index: number, color: number): void {
+        let s = getStrip();
+        s.setPixelColor(index, color);
         s.show();
     }
 }
 
+// ==========================================
 // TAB 3: MẮT THU HỒNG NGOẠI IR 
 // ==========================================
 //% weight=85 color=#E3008C icon="\uf012" block="Hồng Ngoại IR"
@@ -311,14 +297,12 @@ namespace Expansion_IR {
     let lastCommand = -1;
     let irInitialized = false;
 
-    // Các biến phục vụ ngắt phần cứng
     let mark = 0;
     let space = 0;
     let bits = 0;
     let data = 0;
     let receiving = false;
 
-    // Mã HEX 
     export enum IRKeys {
         //% block="Lên"
         Up = 0x18,
@@ -331,11 +315,11 @@ namespace Expansion_IR {
         //% block="OK"
         OK = 0x1C,
         //% block="Phím 1"
-        Num1 = 0x45, 
+        Num1 = 0x45,
         //% block="Phím 2"
-        Num2 = 0x46, 
+        Num2 = 0x46,
         //% block="Phím 3"
-        Num3 = 0x47, 
+        Num3 = 0x47,
         //% block="Phím 4"
         Num4 = 0x44,
         //% block="Phím 5"
@@ -356,7 +340,6 @@ namespace Expansion_IR {
         Hash = 0x0D,
     }
 
-    //Khởi tạo mắt thu IR. Cần gọi ở khối [on start]
     //% block="Khởi tạo mắt thu IR tại chân %pin"
     //% weight=100
     export function initIR(pin: DigitalPin): void {
@@ -364,38 +347,30 @@ namespace Expansion_IR {
         pins.setPull(irPin, PinPullMode.PullUp);
         irInitialized = true;
 
-        // Ngắt phần cứng bắt xung LOW (Đo khoảng thời gian Mark)
         pins.onPulsed(irPin, PulseValue.Low, function () {
             mark = pins.pulseDuration();
         });
 
-        // Ngắt phần cứng bắt xung HIGH (Đo khoảng thời gian Space và giải mã)
         pins.onPulsed(irPin, PulseValue.High, function () {
             space = pins.pulseDuration();
 
-            // Bắt Header của giao thức NEC: 9ms LOW, 4.5ms HIGH
             if (mark > 8000 && mark < 10000 && space > 3000 && space < 5000) {
                 bits = 0;
                 data = 0;
                 receiving = true;
             }
-            // Đọc 32 bit dữ liệu nếu đã bắt được Header
             else if (receiving) {
                 if (space > 1000 && space < 2500) {
-                    // Khoảng High dài (~1.69ms) -> Ghi nhận Bit 1
                     data |= (1 << bits);
                 } else if (space > 200 && space < 1000) {
-                    // Khoảng High ngắn (~0.56ms) -> Ghi nhận Bit 0 (không cần dịch bit)
+                    // Bit 0
                 } else {
-                    // Xung nhiễu, hủy quá trình đọc mẻ này
                     receiving = false;
                     return;
                 }
                 bits++;
 
-                // Đã nhận đủ 32 bit dữ liệu
                 if (bits === 32) {
-                    // Trích xuất mã Lệnh (Command) từ byte thứ 3
                     let command = (data >> 16) & 0xFF;
                     lastCommand = command;
                     receiving = false;
@@ -404,19 +379,17 @@ namespace Expansion_IR {
         });
     }
 
-    //Kiểm tra xem một phím có đang được bấm hay không
     //% block="Phím %key được bấm ?"
     //% weight=90
     export function isKeyPressed(key: IRKeys): boolean {
         if (!irInitialized) return false;
         if (lastCommand === key) {
-            lastCommand = -1; // Xóa đệm, tránh dính phím
+            lastCommand = -1;
             return true;
         }
         return false;
     }
 
-    //Trả về mã HEX thực tế của phím (Dùng để in ra màn hình LED matrix)
     //% block="Đọc mã HEX của phím"
     //% weight=80
     export function getIrCode(): number {

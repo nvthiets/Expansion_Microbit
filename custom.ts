@@ -76,10 +76,6 @@ namespace Expansion_Microbit {
             setPwm(idx, 0, 0);
         }
 
-        // Đánh thức 2 IC DRV8833
-        pins.digitalWritePin(DigitalPin.P8, 1);
-        pins.digitalWritePin(DigitalPin.P12, 1);
-
         initialized = true;
     }
 

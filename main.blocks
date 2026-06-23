@@ -1,1 +1,1 @@
-<xml xmlns="https://developers.google.com/blockly/xml"><variables></variables><block type="pxt-on-start" id="eNp}bLT`!ig(~9UB/EvU" x="0" y="0"></block></xml>
+<xml xmlns="https://developers.google.com/blockly/xml"><variables></variables><block type="pxt-on-start" id=":qFgAcp{T52fIJNxbr4+" x="0" y="0"></block><block type="Expansion_Microbit_playSoundEffect" id="[Um8+)TQt3S0w*_@}E{z" disabled-reasons="pxt_automatic_disabled" x="-26" y="489"><field name="effect">Expansion_Microbit.SoundEffect.ShortBeep</field></block></xml>

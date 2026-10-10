@@ -226,15 +226,14 @@ namespace Expansion_Microbit {
 //% weight=90 color=#0078D7 icon="\uf0eb" block="WS2812"
 namespace Expansion_WS2812 {
     let activeStrip: neopixel.Strip = null;
-    let _activePin = DigitalPin.P16;
+    let _activePin = DigitalPin.P12; // Đã ghim chặt cứng vào chân P12
     let _activeCount = 4;
     let _brightness = 100;
 
-    //% block="Setup LED strip at pin %pin with %numLeds LEDs"
-    //% pin.defl=DigitalPin.P16 numLeds.defl=4
+    //% block="Setup LED strip at pin P12 with %numLeds LEDs"
+    //% numLeds.defl=4
     //% weight=110
-    export function setupLED(pin: DigitalPin, numLeds: number): void {
-        _activePin = pin;
+    export function setupLED(numLeds: number): void {
         _activeCount = numLeds;
         activeStrip = neopixel.create(_activePin, _activeCount, NeoPixelMode.RGB);
         activeStrip.setBrightness(_brightness);

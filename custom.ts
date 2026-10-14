@@ -1,5 +1,5 @@
 // ==========================================
-// TAB 1: MOTOR, SERVO & SENSOR CONTROL
+// TAB 1: MOTOR, SERVO, PWM & SENSOR CONTROL
 // ==========================================
 //% weight=100 color=#0fbc11 icon="\uf11b" block="Expansion_Microbit"
 namespace Expansion_Microbit {
@@ -71,7 +71,7 @@ namespace Expansion_Microbit {
         control.waitMicros(5000);
         i2cwrite(PCA9685_ADDRESS, MODE1, oldmode | 0xa1);
 
-        // ĐÃ SỬA: Bắt đầu từ 0 để Servo S1 nhận đúng tín hiệu khởi tạo
+        // Bắt đầu từ 0 để khởi tạo toàn bộ 16 kênh an toàn
         for (let idx = 0; idx < 16; idx++) {
             setPwm(idx, 0, 0);
         }
@@ -101,6 +101,16 @@ namespace Expansion_Microbit {
         if (!initialized) initPCA9685();
         let v_us = (degree * 1800 / 180 + 600);
         let value = v_us * 4096 / 20000;
+        setPwm(channel, 0, value);
+    }
+
+    //% block="PCA9685 pin %channel write PWM %value"
+    //% weight=98 value.min=0 value.max=4095
+    //% group="Actuators"
+    export function pwmWritePCA9685(channel: ServoChannel, value: number): void {
+        if (!initialized) initPCA9685();
+        if (value > 4095) value = 4095;
+        if (value < 0) value = 0;
         setPwm(channel, 0, value);
     }
 
